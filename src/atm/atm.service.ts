@@ -1266,13 +1266,24 @@ export class AtmService {
       }
 
       const cuentas = Array.from(cuentasSet);
-      await this.validarLotes(cuentas);
+      const validar = await this.validarLotes(cuentas);
+
+      console.log(validar)
 
       //debito carioca
-      await this.procesarDebitoCariocaNomina(cuenta,sumaMonto,16,nota);  
-
+      
+        
+       const result = await this.procesarDebitoCariocaNomina(cuenta,sumaMonto,16,nota); 
+       
+       if(result === '00'){
+        throw new HttpException('Error Al Debitar Carioca', HttpStatus.BAD_REQUEST);
+       }
+     
       try {
-        await this.pagosCuenta(datos,nota);
+        const pagos = await this.pagosCuenta(datos,nota);
+        if(pagos === '00'){
+          throw new HttpException('Error Al Acreditar Cuentas', HttpStatus.BAD_REQUEST);
+         }
       } catch (error) {
         console.error('Error en pagosCuenta:', error);
         throw new HttpException('Error en el procesamiento de pagos', HttpStatus.BAD_REQUEST);
@@ -1397,7 +1408,7 @@ export class AtmService {
         })),
       };
   
-      console.log('cuentas:',cuentas);
+      console.log('Credito cuentas:',nuevoData);
   
       let config = {
         method: 'post',
@@ -1484,11 +1495,11 @@ export class AtmService {
       //const cuenta = process.env.CARIOCAACCOUNT;
       //debito carioca
      // await this.procesarDebitoCarioca(cuenta,monto,270);  
-      return 'Procesamiento completado';
+      return '01';
   
     } catch (error) {
       console.error("Error en pagosCuenta:", error);
-      return 'Error al procesar pagos';
+      return '00';
     }
   } 
 
@@ -1557,9 +1568,11 @@ export class AtmService {
         bankacc: cuBU,
         deliverytype: "01",
         payercode: "03",//ventanilla
-        remcategory: "01"
+        remcategory: "01",
+        idtransacion:7 // espera por orbis
       });     
   
+      console.log('data a enviar',data)
       
     const token = await this.GetToken();
     const tokenWithoutQuotes = token.slice(1, -1);  
@@ -1856,6 +1869,8 @@ export class AtmService {
         "canalContable": canal.toString(),
         "canalEnviaSolicitud": canal.toString()
       };
+
+      console.log("debito Carioca: ",data)
       
       const config = {
         method: 'post',
